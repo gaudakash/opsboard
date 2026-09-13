@@ -18,7 +18,7 @@ export async function signup(formData: {
     options: {
       data: {
         full_name: formData.full_name,
-        role: formData.role, // passes role to our trigger function we made earlier!
+        role: formData.role,
       },
     },
   })
