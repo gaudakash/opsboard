@@ -9,8 +9,8 @@ import { createProduct } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, ArrowRight, Check, Upload, X } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { ArrowLeft, ArrowRight, Upload, X, Trash2, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 const productSchema = z.object({
@@ -26,12 +26,30 @@ const productSchema = z.object({
 
 type ProductFormValues = z.infer<typeof productSchema>
 
+interface Variant {
+  name: string
+  color: string
+  size: string
+  price: number
+  stock: number
+  sku: string
+}
+
 export default function NewProductPage() {
   const router = useRouter()
   const supabase = createClient()
   const [step, setStep] = useState(1)
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([])
   const [imageUrls, setImageUrls] = useState<string[]>([])
+  const [variants, setVariants] = useState<Variant[]>([])
+  const [newVariant, setNewVariant] = useState<Variant>({
+    name: '',
+    color: 'Black',
+    size: 'M',
+    price: 999,
+    stock: 10,
+    sku: '',
+  })
   const [uploading, setUploading] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -51,7 +69,6 @@ export default function NewProductPage() {
     },
   })
 
-  // Fetch categories from Supabase on mount
   useEffect(() => {
     async function fetchCategories() {
       const { data } = await supabase.from('categories').select('*')
@@ -60,7 +77,6 @@ export default function NewProductPage() {
     fetchCategories()
   }, [])
 
-  // Handle image file upload to Supabase Storage
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
@@ -72,12 +88,11 @@ export default function NewProductPage() {
       const file = files[i]
       const fileExt = file.name.split('.').pop()
       const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
-      const filePath = `${fileName}`
 
-      const { error } = await supabase.storage.from('product-images').upload(filePath, file)
+      const { error } = await supabase.storage.from('product-images').upload(fileName, file)
 
       if (!error) {
-        const { data: publicUrlData } = supabase.storage.from('product-images').getPublicUrl(filePath)
+        const { data: publicUrlData } = supabase.storage.from('product-images').getPublicUrl(fileName)
         newUrls.push(publicUrlData.publicUrl)
       }
     }
@@ -90,16 +105,24 @@ export default function NewProductPage() {
     setImageUrls(imageUrls.filter((_, i) => i !== index))
   }
 
-  // Next step validation handler
+  const addVariant = () => {
+    if (!newVariant.sku) {
+      alert('Please enter a variant SKU')
+      return
+    }
+    setVariants([...variants, { ...newVariant, name: `${newVariant.color} / ${newVariant.size}` }])
+    setNewVariant({ name: '', color: 'Black', size: 'M', price: 999, stock: 10, sku: '' })
+  }
+
+  const removeVariant = (index: number) => {
+    setVariants(variants.filter((_, i) => i !== index))
+  }
+
   const nextStep = async () => {
     let isValid = false
-    if (step === 1) {
-      isValid = await trigger(['name', 'description', 'categoryId'])
-    } else if (step === 2) {
-      isValid = await trigger(['price', 'compareAtPrice', 'sku', 'stock', 'status'])
-    } else {
-      isValid = true
-    }
+    if (step === 1) isValid = await trigger(['name', 'description', 'categoryId'])
+    else if (step === 2) isValid = await trigger(['price', 'compareAtPrice', 'sku', 'stock', 'status'])
+    else isValid = true
 
     if (isValid) setStep((prev) => Math.min(prev + 1, 5))
   }
@@ -130,7 +153,6 @@ export default function NewProductPage() {
         </Button>
       </div>
 
-      {/* Steps Indicator Bar */}
       <div className="grid grid-cols-5 gap-2 bg-white p-3 rounded-lg border shadow-sm text-center text-xs font-semibold">
         <div className={`p-2 rounded ${step === 1 ? 'bg-primary text-primary-foreground' : 'bg-slate-100 text-slate-600'}`}>1. Basic</div>
         <div className={`p-2 rounded ${step === 2 ? 'bg-primary text-primary-foreground' : 'bg-slate-100 text-slate-600'}`}>2. Pricing</div>
@@ -148,7 +170,7 @@ export default function NewProductPage() {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Step 1: Basic Details */}
+            {/* Step 1 */}
             {step === 1 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800">Step 1: Basic Details</h3>
@@ -182,7 +204,7 @@ export default function NewProductPage() {
               </div>
             )}
 
-            {/* Step 2: Pricing and Stock */}
+            {/* Step 2 */}
             {step === 2 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800">Step 2: Pricing and Stock</h3>
@@ -223,33 +245,70 @@ export default function NewProductPage() {
               </div>
             )}
 
-                        {/* Step 3: Product Variants */}
+            {/* Step 3: Interactive Variants */}
             {step === 3 && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-800">Step 3: Product Variants (Optional)</h3>
+                <p className="text-sm text-slate-500">Add size or color variations for this product.</p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-4 rounded-lg border">
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-800">Step 3: Product Variants (Optional)</h3>
-                    <p className="text-sm text-slate-500">Add size, color, or style variants for this product.</p>
+                    <Label className="text-xs">Color</Label>
+                    <Input
+                      value={newVariant.color}
+                      onChange={(e) => setNewVariant({ ...newVariant, color: e.target.value })}
+                      placeholder="Black"
+                    />
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      // We can store variants in local state if needed, or leave optional
-                      alert('Variant added!')
-                    }}
-                  >
-                    + Add Variant
-                  </Button>
+                  <div>
+                    <Label className="text-xs">Size</Label>
+                    <Input
+                      value={newVariant.size}
+                      onChange={(e) => setNewVariant({ ...newVariant, size: e.target.value })}
+                      placeholder="M / L"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Price</Label>
+                    <Input
+                      type="number"
+                      value={newVariant.price}
+                      onChange={(e) => setNewVariant({ ...newVariant, price: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">SKU</Label>
+                    <Input
+                      value={newVariant.sku}
+                      onChange={(e) => setNewVariant({ ...newVariant, sku: e.target.value })}
+                      placeholder="SKU-VAR-1"
+                    />
+                  </div>
+                  <div className="col-span-full pt-2">
+                    <Button type="button" onClick={addVariant} size="sm" className="w-full gap-2">
+                      <Plus className="h-4 w-4" /> Add Variant
+                    </Button>
+                  </div>
                 </div>
-                <div className="p-6 border border-dashed rounded-lg text-center bg-slate-50 space-y-3">
-                  <p className="text-sm text-slate-600">No variants added yet. This product will use default base pricing and stock.</p>
-                </div>
+
+                {variants.length > 0 ? (
+                  <div className="space-y-2">
+                    {variants.map((v, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-white border rounded-md text-sm">
+                        <span>{v.color} / {v.size} — ₹{v.price} ({v.sku})</span>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => removeVariant(idx)} className="text-rose-600">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500 text-center py-2">No variants added yet.</p>
+                )}
               </div>
             )}
 
-            {/* Step 4: Images Upload */}
+            {/* Step 4: Images */}
             {step === 4 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800">Step 4: Product Images</h3>
@@ -262,12 +321,14 @@ export default function NewProductPage() {
                   <p className="text-xs text-slate-500 mt-2">PNG, JPG, WEBP up to 5MB</p>
                 </div>
 
-                {/* Image Previews */}
                 {imageUrls.length > 0 && (
                   <div className="grid grid-cols-4 gap-4 mt-4">
                     {imageUrls.map((url, idx) => (
-                      <div key={idx} className="relative group border rounded-md overflow-hidden aspect-square">
-                        <img src={url} alt="Preview" className="w-full h-full object-cover" />
+                      <div key={idx} className="relative group border rounded-md overflow-hidden aspect-square bg-slate-100">
+                        <img src={url} alt="Preview" className="w-full h-full object-cover" onError={(e) => {
+                          // Fallback if image fails to load
+                          (e.target as HTMLElement).style.display = 'none'
+                        }} />
                         <button
                           type="button"
                           onClick={() => removeImage(idx)}
@@ -282,7 +343,7 @@ export default function NewProductPage() {
               </div>
             )}
 
-            {/* Step 5: Review and Submit */}
+            {/* Step 5: Review */}
             {step === 5 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800">Step 5: Review and Submit</h3>
@@ -292,12 +353,12 @@ export default function NewProductPage() {
                   <p><strong>SKU:</strong> {getValues('sku')}</p>
                   <p><strong>Stock:</strong> {getValues('stock')}</p>
                   <p><strong>Status:</strong> {getValues('status')}</p>
+                  <p><strong>Variants Added:</strong> {variants.length}</p>
                   <p><strong>Images Uploaded:</strong> {imageUrls.length}</p>
                 </div>
               </div>
             )}
 
-            {/* Navigation Buttons */}
             <div className="flex justify-between pt-4 border-t">
               {step > 1 ? (
                 <Button type="button" variant="outline" onClick={prevStep}>
