@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 
 export async function createProduct(formData: {
   name: string
-  description: string
+  description?: string
   categoryId: string
   price: number
   compareAtPrice?: number

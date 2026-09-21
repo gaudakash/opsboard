@@ -34,7 +34,7 @@ export default function OrderStatusChart() {
                 ))}
               </Pie>
               <Tooltip />
-              <Legend verticalAlign="bottom" height={36} fontSize={12} />
+              <Legend verticalAlign="bottom" height={36} />
             </PieChart>
           </ResponsiveContainer>
         </div>
