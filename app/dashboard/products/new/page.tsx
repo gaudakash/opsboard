@@ -17,10 +17,10 @@ const productSchema = z.object({
   name: z.string().min(2, { message: 'Product name must be at least 2 characters' }),
   description: z.string().optional(),
   categoryId: z.string().min(1, { message: 'Please select a category' }),
-  price: z.coerce.number().min(1, { message: 'Price must be greater than 0' }),
-  compareAtPrice: z.coerce.number().optional(),
+  price: z.number().min(1, { message: 'Price must be greater than 0' }),
+  compareAtPrice: z.number().optional(),
   sku: z.string().min(2, { message: 'SKU is required' }),
-  stock: z.coerce.number().min(0, { message: 'Stock cannot be negative' }),
+  stock: z.number().min(0, { message: 'Stock cannot be negative' }),
   status: z.enum(['draft', 'published', 'archived']),
 })
 
@@ -148,7 +148,7 @@ export default function NewProductPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight text-slate-800">Add New Product</h2>
-        <Button variant="outline" onClick={() => router.back()}>
+        <Button type="button" variant="outline" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
       </div>
@@ -211,12 +211,12 @@ export default function NewProductPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Price (₹)</Label>
-                    <Input type="number" {...register('price')} />
+                    <Input type="number" {...register('price', { valueAsNumber: true })} />
                     {errors.price && <p className="text-xs text-destructive">{errors.price.message}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label>Compare at Price (MRP)</Label>
-                    <Input type="number" {...register('compareAtPrice')} />
+                    <Input type="number" {...register('compareAtPrice', { valueAsNumber: true })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -227,7 +227,7 @@ export default function NewProductPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Stock Quantity</Label>
-                    <Input type="number" {...register('stock')} />
+                    <Input type="number" {...register('stock', { valueAsNumber: true })} />
                     {errors.stock && <p className="text-xs text-destructive">{errors.stock.message}</p>}
                   </div>
                 </div>
@@ -245,7 +245,7 @@ export default function NewProductPage() {
               </div>
             )}
 
-            {/* Step 3: Interactive Variants */}
+            {/* Step 3 */}
             {step === 3 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800">Step 3: Product Variants (Optional)</h3>
@@ -308,7 +308,7 @@ export default function NewProductPage() {
               </div>
             )}
 
-            {/* Step 4: Images */}
+            {/* Step 4 */}
             {step === 4 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800">Step 4: Product Images</h3>
@@ -325,10 +325,7 @@ export default function NewProductPage() {
                   <div className="grid grid-cols-4 gap-4 mt-4">
                     {imageUrls.map((url, idx) => (
                       <div key={idx} className="relative group border rounded-md overflow-hidden aspect-square bg-slate-100">
-                        <img src={url} alt="Preview" className="w-full h-full object-cover" onError={(e) => {
-                          // Fallback if image fails to load
-                          (e.target as HTMLElement).style.display = 'none'
-                        }} />
+                        <img src={url} alt="Preview" className="w-full h-full object-cover" />
                         <button
                           type="button"
                           onClick={() => removeImage(idx)}
@@ -343,7 +340,7 @@ export default function NewProductPage() {
               </div>
             )}
 
-            {/* Step 5: Review */}
+            {/* Step 5 */}
             {step === 5 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800">Step 5: Review and Submit</h3>
